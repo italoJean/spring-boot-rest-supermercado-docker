@@ -1,0 +1,54 @@
+services:
+  # Servidor de Base de Datos
+  mysql_database:
+    image: mysql:8.0
+    container_name: mysql_server
+    restart: always
+    # Red privada para que los servicios se hablen entre sí
+    networks:
+      - supermercado-network
+    environment:
+      - MYSQL_DATABASE=pruebatecnicadocker
+      - MYSQL_ROOT_PASSWORD=123456
+    ports:
+      - "33066:3306" # Tu PC entra por el 33065, pero Docker usa el 3306 internamente
+      # PERSISTENCIA: Los datos no se borran aunque el contenedor se destruya
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # Este comando verifica que MySQL esté realmente listo antes de subir la App
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Tu aplicación Spring Boot
+  app-supermercado:
+    build: . # Busca el Dockerfile en la misma carpeta
+    container_name: app_pruebatec
+    networks:
+      - supermercado-network
+    ports:
+      - "8080:8080"
+    # LÍMITES: Evita que la app consuma toda la RAM de tu PC
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+    depends_on:
+      mysql_database:
+        condition: service_healthy # Espera a que MySQL pase el healthcheck
+    environment:
+      # Estos valores pisan a los de tu application.properties en Docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql_database:3306/pruebatecnicadocker?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+# --- DEFINICIÓN DE REDES Y VOLÚMENES ---
+networks:
+  supermercado-network:
+    driver: bridge
+
+volumes:
+  mysql_data: # Este volumen se guarda en el disco duro de tu máquina
