@@ -11,6 +11,9 @@ COPY pom.xml .
 COPY .mvn .mvn
 COPY mvnw .
 
+# 2. LE DAS EL PERMISO (La solución)
+RUN chmod +x mvnw
+
 # Descargamos las dependencias (esto ahorra tiempo en futuros builds)
 RUN ./mvnw dependency:go-offline
 
